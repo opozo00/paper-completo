@@ -14,6 +14,7 @@ export default function App() {
   const [transcriptions, setTranscriptions] = useState([]);
   const [diarization, setDiarization] = useState([]);
   const [shouldContinueRecording, setshouldContinueRecording] = useState(true);
+  const [contador, setContador] = useState();
 
 
 
@@ -68,7 +69,9 @@ export default function App() {
       setRecording(recording);
       setIsRecording(true);
       socket.emit('startRecording');
-      await new Promise(resolve => setTimeout(resolve, 10000)); // Esperar 10 segundos
+      await new Promise(resolve =>
+        setContador(setTimeout(resolve, 10000))
+      ); // Esperar 10 segundos
       if (!shouldContinueRecording) {
         return;
       }
@@ -88,60 +91,21 @@ export default function App() {
     }
   };
 
-  async function startRecording() {
-    // Permisos para iniciar la grabación
-    try {
-      const permission = await Audio.requestPermissionsAsync();
-      if (permission.status === 'granted') {
-        await Audio.setAudioModeAsync({
-          allowsRecordingIOS: true,
-          playsInSilentModeIOS: true,
-        });
-      } else {
-        console.log("Permisos de grabación no concedidos"); // Mensaje si no se pudo iniciar la grabación por error en los permisos
-      }
-
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recording);
-      socket.emit('startRecording');
-      setIsRecording(true);
-
-      // // Iniciar un intervalo para leer y enviar los datos de audio
-      // const intervalId = setInterval(async () => {
-      //   if (recording) {
-      //     //const { sound, status } = await recording.getStatusAsync();
-      //     if ((await recording.getStatusAsync()).isRecording) {
-      //       const uri = recording.getURI();
-      //       const audioFile = await convertToBinary(uri);
-      //       socket.emit('audio', audioFile);
-      //     }
-      //   }
-      // }, 1000); // Enviar datos de audio cada segundo
-      // // Guardar el ID del intervalo para poder detenerlo más tarde
-      // setIntervalId(intervalId);
-
-    } catch (err) {
-      console.log("No se pudo iniciar la grabación: ", err);
-    }
-  }
   async function stopRecording() {
     try {
-      console.log("Se entró al try catch");
+      clearTimeout(contador);//Se detiene el TimeOut para que no entre en loop
       setshouldContinueRecording(false);
       setIsRecording(false);
-      console.log('Existe una grabación >', recording.getStatusAsync());
       if (recording) {
-        console.log("Se entró al primer IF condicional");
         const status = await recording.getStatusAsync();
         if (!status.isDoneRecording) {
-          console.log("Se entró al segundo IF condicional");
           await recording.stopAndUnloadAsync();
           const uri = recording.getURI();
           const audioFile2 = await convertToBinary(uri);
           socket.emit('audio', audioFile2);
           socket.emit('stopRecording');
           //setRecording(null);
-          socket.emit('endRecording');
+          //socket.emit('endRecording');
         }
         setRecording(null);
       }
