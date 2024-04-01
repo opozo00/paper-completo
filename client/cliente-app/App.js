@@ -105,7 +105,7 @@ export default function App() {
           socket.emit('audio', audioFile2);
           socket.emit('stopRecording');
           //setRecording(null);
-          //socket.emit('endRecording');
+          socket.emit('endRecording');
         }
         setRecording(null);
       }
