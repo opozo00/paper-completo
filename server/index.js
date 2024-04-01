@@ -34,6 +34,7 @@ let bufferLength = 0;
 const tenSeconds = 10 * 44100 * 2; // 10 seconds of audio at 44.1kHz and 16-bit depth
 let queue = [];
 const sessionPath = path.join(__dirname, 'wav', `session_${Date.now()}`);
+var outputFile;
 fs.mkdir(sessionPath, { recursive: true }, (err) => {
     if (err) throw err;
 });
@@ -176,46 +177,93 @@ io.on('connection', (socket) => {
         }
     });
 
+    // socket.on('endRecording', async () => {
+    //     fs.readdir(sessionPath, async (err, files) => {
+    //         if (err) {
+    //             console.log('Error al leer la carpeta de audios: ', err);
+    //             return;
+    //         }
+    //         //Filtrar solo archivos .wav
+    //         const wavFiles = files.filter(file => file.endsWith('.wav'));
+    //         const audioFiles = wavFiles.map(file => path.join(sessionPath, file));
+    //         //Merge audios
+    //         //const outputFile = path.join(__dirname, 'merge', `output_${Date.now()}.wav`); //Ruta del archivo de audio final
+    //         name = `output_${Date.now()}.wav`
+
+    //         //outputFile = path.join(__dirname, 'merge', `output_${Date.now()}.wav`); //Ruta del archivo de audio final
+    //         outputFile = path.join(__dirname, 'merge', name); //Ruta del archivo de audio final
+    //         await mergeAudioFiles(audioFiles, outputFile)
+    //             .then(outputFile => {
+    //                 console.log('Archivos de audio unidos exitosamente: ', outputFile);
+    //             })
+    //             .catch(error => {
+    //                 console.error('Error al unir los archivos de audio: ', error);
+    //             })
+    //     })
+    //     try {
+    //         // Ruta al script de Python
+    //         const pythonScriptPath = '../script/script.py';
+    //         // Crear un nuevo proceso hijo usando spawn
+    //         //const pythonProcess = spawn('python', [pythonScriptPath, outputFile]);
+    //         console.log('NAME >>>', name);
+    //         const pythonProcess = spawn('python', [pythonScriptPath, name]);
+
+    //         // Escuchar la salida del script de Python
+    //         pythonProcess.stdout.on('data', async (data) => {
+    //             resultado = JSON.parse(data);
+    //             console.log(`Datos del script de Python: ${data}`);
+    //             transcripciones_json = resultadoPython(resultado);
+    //             socket.emit('diarization', transcripciones_json);
+    //         });
+    //         // Escuchar los errores del script de Python
+    //         pythonProcess.stderr.on('data', (data) => {
+    //             console.error(`Error del script de Python: ${data}`);
+    //         });
+    //     } catch (err) {
+    //         console.log('Este fue el error que sucedio al querer segmentar los hablantes: ', err);
+    //     }
+    // })
     socket.on('endRecording', async () => {
         fs.readdir(sessionPath, async (err, files) => {
             if (err) {
                 console.log('Error al leer la carpeta de audios: ', err);
                 return;
             }
-            //Filtrar solo archivos .wav
+            // Filtrar solo archivos .wav
             const wavFiles = files.filter(file => file.endsWith('.wav'));
             const audioFiles = wavFiles.map(file => path.join(sessionPath, file));
-            //Merge audios
-            const outputFile = path.join(__dirname, 'merge', `output_${Date.now()}.wav`); //Ruta del archivo de audio final
-            await mergeAudioFiles(audioFiles, outputFile)
-                .then(outputFile => {
-                    console.log('Archivos de audio unidos exitosamente: ', outputFile);
-                })
-                .catch(error => {
-                    console.error('Error al unir los archivos de audio: ', error);
-                })
-        })
-        try {
-            // Ruta al script de Python
-            const pythonScriptPath = '../script/script.py';
-            // Crear un nuevo proceso hijo usando spawn
-            const pythonProcess = spawn('python', [pythonScriptPath, `${outputFile}`]);
 
-            // Escuchar la salida del script de Python
-            pythonProcess.stdout.on('data', async (data) => {
-                resultado = JSON.parse(data);
-                console.log(`Datos del script de Python: ${data}`);
-                // transcripciones_json = resultadoPython(resultado);
-                // socket.emit('diarization', transcripciones_json);
-            });
-            // Escuchar los errores del script de Python
-            pythonProcess.stderr.on('data', (data) => {
-                console.error(`Error del script de Python: ${data}`);
-            });
-        } catch (err) {
-            console.log('Este fue el error que sucedio al que segmentar los hablantes: ', err);
-        }
-    })
+            try {
+                // Genera un nombre único para el archivo de salida
+                const name = `output_${Date.now()}.wav`;
+                const outputFile = path.join(__dirname, 'merge', name); // Ruta del archivo de audio final
+
+                // Fusiona los archivos de audio
+                await mergeAudioFiles(audioFiles, outputFile);
+                console.log('Archivos de audio unidos exitosamente: ', outputFile);
+
+                // Ruta al script de Python
+                const pythonScriptPath = '../script/script.py';
+                // Crea un nuevo proceso hijo usando spawn
+                const pythonProcess = spawn('python', [pythonScriptPath, name]);
+
+                // Escucha la salida del script de Python
+                pythonProcess.stdout.on('data', async (data) => {
+                    resultado = JSON.parse(data);
+                    console.log(`Datos del script de Python: ${data}`);
+                    transcripciones_json = resultadoPython(resultado);
+                    socket.emit('diarization', transcripciones_json);
+                });
+                // Escucha los errores del script de Python
+                pythonProcess.stderr.on('data', (data) => {
+                    console.error(`Error del script de Python: ${data}`);
+                });
+            } catch (err) {
+                console.log('Este fue el error que sucedió al querer segmentar los hablantes: ', err);
+            }
+        });
+    });
+
 
     /*
     El proceso será que cada Fragmento de Audio de 10 segundos se guardará
