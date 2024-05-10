@@ -16,10 +16,6 @@ export default function App() {
   const [shouldContinueRecording, setshouldContinueRecording] = useState(true);
   const [contador, setContador] = useState();
 
-
-
-
-
   useEffect(() => {
     setSocket(socket);
     socket.on('connection', (csocket) => {
@@ -105,10 +101,10 @@ export default function App() {
           socket.emit('audio', audioFile2);
           socket.emit('stopRecording');
           //setRecording(null);
-          socket.emit('endRecording');
         }
         setRecording(null);
       }
+      socket.emit('endRecording');
       //socket.emit('endRecording');
       // if (recording) {
       //   setshouldContinueRecording(false);
@@ -190,9 +186,12 @@ export default function App() {
           <Text style={styles.heading}>Cantidad de hablantes en el audio: </Text>
           <FlatList
             style={styles.transcriptionText}
-            data={diarization}
-            renderItem={({ item }) => <Text>{item}</Text>}
+            data={Object.entries(diarization)}
+            renderItem={({ item }) => <Text>{`${item[0]}: ${JSON.stringify(item[1])}`}</Text>}
             keyExtractor={(item, index) => index.toString()}
+          // data={diarization}
+          // renderItem={({ item }) => <Text>{item}</Text>}
+          // keyExtractor={(item, index) => index.toString()}
           />
         </View>
       </View>

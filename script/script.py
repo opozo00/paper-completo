@@ -58,27 +58,37 @@ segmentos = transcribe_segments(whisper_resultado)
 #Sincronizar transcripcion y cantidad de hablantes
 num_speakers = len(set(speaker for _, _, speaker in diarization.itertracks(yield_label=True)))
 
+
+added_segments = set()
+
 for turn, _, speaker in diarization.itertracks(yield_label=True):
     turn_transcription = ''
     for segment in segmentos:
         # Si solo hay un hablante, asigna todos los segmentos de transcripción a ese hablante
         if num_speakers == 1:
-            turn_transcription += ' ' + segment['text']
-            #turn_transcription += whisper_resultado['text']
+            # Solo añade la transcripción del segmento si no ha sido añadida antes
+            if segment['text'] not in added_segments:
+                turn_transcription += ' ' + segment['text']
+                added_segments.add(segment['text'])
         else:
             # Calcula el solapamiento entre el turno y el segmento
             overlap = min(segment['end'], turn.end) - max(segment['start'], turn.start)
             # Si hay solapamiento, añade el texto del segmento a la transcripción del turno
-            if overlap > 0:
+            if overlap > 0 and segment['text'] not in added_segments:
                 turn_transcription += ' ' + segment['text']
+                added_segments.add(segment['text'])
     if speaker not in transcriptions_by_speaker:
         transcriptions_by_speaker[speaker] = []
     transcriptions_by_speaker[speaker].append(turn_transcription.strip())
 
+# Convierte el diccionario a una cadena JSON
+output_json = json.dumps(transcriptions_by_speaker)
+
+# Imprime la cadena JSON
+print(output_json)
 # # Imprime las transcripciones de cada hablante
-for speaker, transcriptions in transcriptions_by_speaker.items():
-    print(json.dumps(f"{speaker}: {' '.join(transcriptions)}"))#esto se envía al servidor
-    #print(f"{speaker}: {' '.join(transcriptions)}")#esto se envía al servidor
+# for speaker, transcriptions in transcriptions_by_speaker.items():
+#     print(json.dumps(f"{speaker}: {' '.join(transcriptions)}"))#esto se envía al servidor    #print(f"{speaker}: {' '.join(transcriptions)}")#esto se envía al servidor
 
 
 num_speakers = len(transcriptions_by_speaker)

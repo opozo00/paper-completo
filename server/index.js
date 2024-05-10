@@ -25,16 +25,10 @@ const io = new Server(server, {
 
 const openai = new OpenAI({ apikey: process.env.OPENAI_APIKEY });
 let recording = false;
-//const audioFolderPath = path.join(__dirname, 'wav');
-var resultado;
+//var resultado;
 var segments;
 var transcripciones_json;
-let audioBuffer = [];
-let bufferLength = 0;
-const tenSeconds = 10 * 44100 * 2; // 10 seconds of audio at 44.1kHz and 16-bit depth
-let queue = [];
 const sessionPath = path.join(__dirname, 'wav', `session_${Date.now()}`);
-var outputFile;
 fs.mkdir(sessionPath, { recursive: true }, (err) => {
     if (err) throw err;
 });
@@ -52,64 +46,6 @@ io.on('connection', (socket) => {
     socket.on('audio', async (data) => {
 
         const buffer = Buffer.from(data, 'base64');
-        // console.log(typeof buffer);
-        // console.log(buffer);
-        // audioBuffer.push(buffer);
-        // bufferLength += buffer.length;
-        // if (bufferLength >= tenSeconds) {
-        //     const fileName = `audio_${Date.now()}.wav`;
-        //     const filePath = path.join(__dirname, 'temp', fileName);
-        //     const finalPath = path.join(__dirname, 'wav', fileName);
-
-        //     const tenSecondsBuffer = Buffer.concat(audioBuffer);
-        //     audioBuffer = [];
-        //     bufferLength = 0;
-
-        //     const writeFilePromise = new Promise((resolve, reject) => {
-        //         fs.writeFile(filePath, tenSecondsBuffer, 'binary', (err) => {
-        //             if (err) {
-        //                 reject(err);
-        //             } else {
-        //                 console.log('Audio saved:', fileName);
-        //                 resolve(filePath); // Resuelve la promesa con la ruta del archivo
-        //             }
-        //         });
-        //     });
-        //     try {
-        //         // Esperar a que se resuelva la promesa antes de continuar
-        //         const savedFilePath = await writeFilePromise;
-        //         //Convertir a wav
-        //         const wavFilePath = await convertToWav(savedFilePath, `${finalPath}.wav`);
-
-        //         // // Añadir el nombre del archivo a la cola
-        //         // queue.push(wavFilePath);
-
-        //         // // Procesar los archivos de la cola uno por uno
-        //         // while (queue.length > 0) {
-        //         //     const filePath = queue.shift();
-        //         //     try {
-        //         //         const whisper = await transcribe(filePath);
-        //         //         const transcription = whisper.text;
-        //         //         segments = whisper.segments;
-        //         //         console.log(segments);
-
-        //         //         console.log("Esta es la transcripción del audio >>> " + transcription);
-
-        //         //         // emitir la transcripción
-        //         //         socket.emit('transcription', transcription);
-
-        //         //     } catch (error) {
-        //         //         console.error("Error al transcribir el archivo de audio:", error);
-        //         //         // Si hay un error, añadir el archivo de nuevo a la cola para reintentar más tarde
-        //         //         queue.push(filePath);
-        //         //         break;
-        //         //     }
-        //         // }
-
-        //     } catch (error) {
-        //         console.error("Error al transcribir el archivo de audio:", error);
-        //     }
-        // }
         const fileName = `audio_${Date.now()}.wav`;
         const filePath = path.join(__dirname, 'temp', fileName);
         //const finalPath = path.join(__dirname, 'wav', fileName);
@@ -146,28 +82,6 @@ io.on('connection', (socket) => {
         } catch (error) {
             console.error("Error al transcribir el archivo de audio:", error);
         }
-
-
-        // try {
-        //     // Ruta al script de Python
-        //     const pythonScriptPath = '../script/script.py';
-        //     // Crear un nuevo proceso hijo usando spawn
-        //     const pythonProcess = spawn('python', [pythonScriptPath, `${fileName}.wav`, JSON.stringify(segments)]);
-
-        //     // Escuchar la salida del script de Python
-        //     pythonProcess.stdout.on('data', async (data) => {
-        //         resultado = JSON.parse(data);
-        //         console.log(`Datos del script de Python: ${data}`);
-        //         transcripciones_json = resultadoPython(resultado);
-        //         socket.emit('diarization', transcripciones_json);
-        //     });
-        //     // Escuchar los errores del script de Python
-        //     pythonProcess.stderr.on('data', (data) => {
-        //         console.error(`Error del script de Python: ${data}`);
-        //     });
-        // } catch (err) {
-        //     console.log('Este fue el error que sucedio al que segmentar los hablantes: ', err);
-        // }
     });
 
     socket.on('stopRecording', async () => {
@@ -177,52 +91,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    // socket.on('endRecording', async () => {
-    //     fs.readdir(sessionPath, async (err, files) => {
-    //         if (err) {
-    //             console.log('Error al leer la carpeta de audios: ', err);
-    //             return;
-    //         }
-    //         //Filtrar solo archivos .wav
-    //         const wavFiles = files.filter(file => file.endsWith('.wav'));
-    //         const audioFiles = wavFiles.map(file => path.join(sessionPath, file));
-    //         //Merge audios
-    //         //const outputFile = path.join(__dirname, 'merge', `output_${Date.now()}.wav`); //Ruta del archivo de audio final
-    //         name = `output_${Date.now()}.wav`
-
-    //         //outputFile = path.join(__dirname, 'merge', `output_${Date.now()}.wav`); //Ruta del archivo de audio final
-    //         outputFile = path.join(__dirname, 'merge', name); //Ruta del archivo de audio final
-    //         await mergeAudioFiles(audioFiles, outputFile)
-    //             .then(outputFile => {
-    //                 console.log('Archivos de audio unidos exitosamente: ', outputFile);
-    //             })
-    //             .catch(error => {
-    //                 console.error('Error al unir los archivos de audio: ', error);
-    //             })
-    //     })
-    //     try {
-    //         // Ruta al script de Python
-    //         const pythonScriptPath = '../script/script.py';
-    //         // Crear un nuevo proceso hijo usando spawn
-    //         //const pythonProcess = spawn('python', [pythonScriptPath, outputFile]);
-    //         console.log('NAME >>>', name);
-    //         const pythonProcess = spawn('python', [pythonScriptPath, name]);
-
-    //         // Escuchar la salida del script de Python
-    //         pythonProcess.stdout.on('data', async (data) => {
-    //             resultado = JSON.parse(data);
-    //             console.log(`Datos del script de Python: ${data}`);
-    //             transcripciones_json = resultadoPython(resultado);
-    //             socket.emit('diarization', transcripciones_json);
-    //         });
-    //         // Escuchar los errores del script de Python
-    //         pythonProcess.stderr.on('data', (data) => {
-    //             console.error(`Error del script de Python: ${data}`);
-    //         });
-    //     } catch (err) {
-    //         console.log('Este fue el error que sucedio al querer segmentar los hablantes: ', err);
-    //     }
-    // })
     socket.on('endRecording', async () => {
         fs.readdir(sessionPath, async (err, files) => {
             if (err) {
@@ -249,10 +117,17 @@ io.on('connection', (socket) => {
 
                 // Escucha la salida del script de Python
                 pythonProcess.stdout.on('data', async (data) => {
-                    resultado = JSON.parse(data);
-                    console.log(`Datos del script de Python: ${data}`);
-                    transcripciones_json = resultadoPython(resultado);
-                    socket.emit('diarization', transcripciones_json);
+                    // const resultado = data.toString();
+                    // const resultado = JSON.parse(data);
+                    // console.log(`Datos del script de Python: ${data}`);
+                    // transcripciones_json = resultadoPython(resultado);
+                    // socket.emit('diarization', transcripciones_json);
+                    const resultado = data.toString();
+                    // Analiza la cadena JSON para obtener un objeto JavaScript
+                    const transcriptions = JSON.parse(resultado);
+                    console.log(`Datos del script de Python: ${resultado}`);
+                    // Envía la cadena de texto a tu aplicación cliente
+                    socket.emit('diarization', transcriptions);
                 });
                 // Escucha los errores del script de Python
                 pythonProcess.stderr.on('data', (data) => {
@@ -263,27 +138,6 @@ io.on('connection', (socket) => {
             }
         });
     });
-
-
-    /*
-    El proceso será que cada Fragmento de Audio de 10 segundos se guardará
-    en una carpeta única por cada Grabación Principal. Dentro de esta carpeta
-    estarán los Fragmetos de Audio a Combinar, para formar un solo archivo
-    de audio. Se usará FFMPEG para poder hacer el Merge. Una vez se cuente 
-    con un solo archivo de audio, se le realizará el proceso de diarización
-    y se lo enviará al cliente. Los pasos serán los siguientes:
-    1. Se recibirán los fragmetos de audio de 10 segundos en el servidor
-    2. Se guardará cada fragmento de audio recibido en el servidor y se lo
-    convertirá en formato .wav
-    3. Cuando la grabación desde el cliente finalice completamente, se llama
-    al evento 'endRecording' para que desde el servidor lea todos los 
-    fragmentos de audio creados en una carpeta y se combinen los combine 
-    usando la función mergeAudioFiles()
-    4. Después de combinar y conseguir un solo archivo de audio se debe
-    realizar la diarización
-    5. Devolver al cliente el resultado de la diarización con la
-    transcripción por cada hablante.
-    */
 
     socket.on('disconnect', () => {
         console.log('a user disconnected: ' + socket.id);
@@ -369,3 +223,25 @@ server.listen(PORT, () => {
 //         }
 //     });
 // });
+
+
+
+/*
+El proceso será que cada Fragmento de Audio de 10 segundos se guardará
+en una carpeta única por cada Grabación Principal. Dentro de esta carpeta
+estarán los Fragmetos de Audio a Combinar, para formar un solo archivo
+de audio. Se usará FFMPEG para poder hacer el Merge. Una vez se cuente 
+con un solo archivo de audio, se le realizará el proceso de diarización
+y se lo enviará al cliente. Los pasos serán los siguientes:
+1. Se recibirán los fragmetos de audio de 10 segundos en el servidor
+2. Se guardará cada fragmento de audio recibido en el servidor y se lo
+convertirá en formato .wav
+3. Cuando la grabación desde el cliente finalice completamente, se llama
+al evento 'endRecording' para que desde el servidor lea todos los 
+fragmentos de audio creados en una carpeta y se combinen los combine 
+usando la función mergeAudioFiles()
+4. Después de combinar y conseguir un solo archivo de audio se debe
+realizar la diarización
+5. Devolver al cliente el resultado de la diarización con la
+transcripción por cada hablante.
+*/
